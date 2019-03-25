@@ -21,6 +21,10 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="vk_error.h" />
+    <ClInclude Include="vk_error_list.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
