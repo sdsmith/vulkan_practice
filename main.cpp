@@ -1,5 +1,6 @@
 #include "vk_error.h"
 
+#include <cassert>
 #include <iostream>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -44,9 +45,83 @@ int main()
     //
     uint32_t dev_count = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(instance, &dev_count, nullptr));
-    std::vector<VkPhysicalDevice> devices;
-    devices.resize(dev_count);
-    VK_CHECK(vkEnumeratePhysicalDevices(instance, &dev_count, devices.data()));
+    if (dev_count == 0) {
+        log_error("No devices available\n");
+        return 1;
+    }
+
+    std::vector<VkPhysicalDevice> physical_devices;
+    physical_devices.resize(dev_count);
+    VK_CHECK(vkEnumeratePhysicalDevices(instance, &dev_count, physical_devices.data()));
+
+    // NOTE: A device defines types of queues that can perform specific work. 
+    // Each queue type is called a queue family. Each queue family may have one
+    // or more queues available for use. A queue family may support one or more
+    // type of work.
+    uint32_t queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
+    assert(queue_family_count > 0);
+    std::vector<VkQueueFamilyProperties> queue_family_properties;
+    queue_family_properties.resize(queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, queue_family_properties.data());
+    
+    // Setup queue info
+    uint32_t gr_queue_family_index = 0;
+    bool found_graphics_queue = false;
+    for (size_t i = 0; i < queue_family_properties.size(); ++i) {
+        if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            gr_queue_family_index = i;
+            found_graphics_queue = true;
+        }
+    }
+    if (!found_graphics_queue) {
+        log_error("Unable to find a graphics queue on device\n");
+    }
+
+    float queue_priorities[1] = { 0.0 };
+    VkDeviceQueueCreateInfo gr_queue_create_info = {};
+    gr_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    gr_queue_create_info.pNext = nullptr;
+    gr_queue_create_info.queueCount = 1;
+    gr_queue_create_info.pQueuePriorities = queue_priorities;
+    gr_queue_create_info.queueFamilyIndex = gr_queue_family_index;
+
+    // Create logical device
+    VkDeviceCreateInfo device_info = {};
+    device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_info.pNext = nullptr;
+    device_info.queueCreateInfoCount = 1;
+    device_info.pQueueCreateInfos = &gr_queue_create_info;
+    device_info.enabledExtensionCount = 0;
+    device_info.ppEnabledExtensionNames = nullptr;
+    device_info.enabledLayerCount = 0;
+    device_info.ppEnabledLayerNames = nullptr;
+    device_info.pEnabledFeatures = nullptr;
+
+    VkDevice device;
+    VK_CHECK(vkCreateDevice(physical_devices[0], &device_info, nullptr, &device));
+
+    // Allocate command buffer pools
+    //
+    // NOTE: Need one pool for each type of queue being used.
+    VkCommandPoolCreateInfo cmd_pool_create_info = {};
+    cmd_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_create_info.pNext = nullptr;
+    cmd_pool_create_info.queueFamilyIndex = gr_queue_family_index;
+    cmd_pool_create_info.flags = 0;
+    VkCommandPool gr_cmd_pool = {};
+    VK_CHECK(vkCreateCommandPool(device, &cmd_pool_create_info, nullptr, &gr_cmd_pool));
+
+    // Create command buffers
+    //
+    VkCommandBufferAllocateInfo gr_cmd_buf_alloc_info = {};
+    gr_cmd_buf_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    gr_cmd_buf_alloc_info.pNext = nullptr;
+    gr_cmd_buf_alloc_info.commandPool = gr_cmd_pool;
+    gr_cmd_buf_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    gr_cmd_buf_alloc_info.commandBufferCount = 1;
+    VkCommandBuffer gr_cmd_buf = {};
+    VK_CHECK(vkAllocateCommandBuffers(device, &gr_cmd_buf_alloc_info, &gr_cmd_buf));
 
     // Destroy Vulkan instance
     //
