@@ -123,8 +123,11 @@ int main()
     VkCommandBuffer gr_cmd_buf = {};
     VK_CHECK(vkAllocateCommandBuffers(device, &gr_cmd_buf_alloc_info, &gr_cmd_buf));
 
-    // Destroy Vulkan instance
+    // Cleanup
     //
+    vkFreeCommandBuffers(device, gr_cmd_pool, gr_cmd_buf_alloc_info.commandBufferCount, &gr_cmd_buf);
+    vkDestroyCommandPool(device, gr_cmd_pool, nullptr);
+    vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
 
     return 0;
