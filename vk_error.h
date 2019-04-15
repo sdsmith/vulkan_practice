@@ -1,5 +1,6 @@
 #pragma once
 
+#define NOMINMAX 1
 #include <vulkan/vulkan.h>
 #include <Windows.h>
 #include <WinBase.h>
