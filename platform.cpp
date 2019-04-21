@@ -19,7 +19,7 @@ LRESULT CALLBACK window_proc_callback(HWND hwnd, UINT msg, WPARAM w_param, LPARA
         break;
 
     default:
-        return DefWindowProc(hwnd, msg, w_param, l_param);
+        return DefWindowProcA(hwnd, msg, w_param, l_param);
     }
 
     return 0;
@@ -51,7 +51,10 @@ Window create_window(const Rect& window_rect)
     }
 
     // Create the window
-    window.h_window = CreateWindowA(window_class_name, window_name, WS_TILEDWINDOW, window_rect.x, window_rect.y, window_rect.width, window_rect.height, nullptr, nullptr, window.h_instance, nullptr);
+    window.h_window = CreateWindowA(window_class_name, window_name, WS_TILEDWINDOW, 
+                                    window_rect.x, window_rect.y, 
+                                    window_rect.width, window_rect.height, 
+                                    nullptr, nullptr, window.h_instance, nullptr);
     if (!window.h_window) {
         assert(!"Unable to create window");
     }
