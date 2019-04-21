@@ -42,7 +42,6 @@ int main()
 
     constexpr int window_width = 640;
     constexpr int window_height = 480;
-
     Rect window_rect = {};
     window_rect.x = CW_USEDEFAULT;
     window_rect.y = CW_USEDEFAULT;
@@ -56,7 +55,9 @@ int main()
     STATUS_CHECK(vulkan.create_logical_device());
     STATUS_CHECK(vulkan.create_command_pool());
     STATUS_CHECK(vulkan.create_command_buffer());
-    //STATUS_CHECK(vulkan.setup_swapchain());
+
+    constexpr uint32_t desired_buf_strategy = 2;
+    STATUS_CHECK(vulkan.setup_swapchain(desired_buf_strategy, window_height, window_width));
     
     vulkan.cleanup();
     
