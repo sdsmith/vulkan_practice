@@ -4,8 +4,8 @@
 
 #ifdef _WIN32
 
-constexpr char const* window_class_name = "VulkanPractice";
-constexpr char const* window_name = "Vulkan Practice";
+constexpr LPCTSTR window_class_name = TEXT("VulkanPractice");
+constexpr LPCTSTR window_name = TEXT("Vulkan Practice");
 
 LRESULT CALLBACK window_proc_callback(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param)
 {
@@ -19,7 +19,7 @@ LRESULT CALLBACK window_proc_callback(HWND hwnd, UINT msg, WPARAM w_param, LPARA
         break;
 
     default:
-        return DefWindowProcA(hwnd, msg, w_param, l_param);
+        return DefWindowProcW(hwnd, msg, w_param, l_param);
     }
 
     return 0;
@@ -31,7 +31,7 @@ Window create_window(const Rect& window_rect)
     window.h_instance = GetModuleHandle(nullptr);
 
     // Register the window class
-    WNDCLASSEXA window_class = {};
+    WNDCLASSEXW window_class = {};
     window_class.cbSize = sizeof(WNDCLASSEX);
     window_class.style = 0;
     window_class.lpfnWndProc = window_proc_callback;
@@ -45,15 +45,14 @@ Window create_window(const Rect& window_rect)
     window_class.lpszClassName = window_class_name;
     window_class.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
 
-    ATOM window_class_atom = RegisterClassExA(&window_class);
+    ATOM window_class_atom = RegisterClassExW(&window_class);
     if (!window_class_atom) {
         assert(!"Unable to register window class");
     }
 
     // Create the window
-    window.h_window = CreateWindowA(window_class_name, window_name, WS_TILEDWINDOW, 
-                                    window_rect.x, window_rect.y, 
-                                    window_rect.width, window_rect.height, 
+    window.h_window = CreateWindowW(window_class_name, window_name, WS_TILEDWINDOW, 
+                                    window_rect.x, window_rect.y, window_rect.width, window_rect.height, 
                                     nullptr, nullptr, window.h_instance, nullptr);
     if (!window.h_window) {
         assert(!"Unable to create window");
