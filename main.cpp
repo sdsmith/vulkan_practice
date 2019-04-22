@@ -14,19 +14,22 @@ int main()
     constexpr uint32_t app_ver = 1;
     constexpr char const* engine_name = "Vulkan Practice Engine";
     constexpr uint32_t engine_ver = 1;
-    
+ 
 #if defined(_DEBUG)
-    vulkan.layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
+    vulkan.instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
+    vulkan.instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
 #endif
-    
+
     // Want the Window System Integration (WSI) extensions.
     // - requires general surface extension
-    vulkan.extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    vulkan.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
-    vulkan.extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    vulkan.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
 #   error Unsupported platform
 #endif
+
+    vulkan.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     
     vulkan.app_info = {};
     vulkan.app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

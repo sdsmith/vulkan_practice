@@ -16,8 +16,10 @@ struct Vulkan_Instance_Info
     VkApplicationInfo app_info;
 
     VkInstance instance;
-    std::vector<char const*> extension_names;
-    std::vector<char const*> layer_names;
+    std::vector<char const*> instance_extension_names;
+    std::vector<char const*> instance_layer_names;
+    std::vector<char const*> device_extension_names;
+    std::vector<char const*> device_layer_names;
 
     VkSurfaceKHR surface;
     VkSurfaceCapabilitiesKHR surface_capabilities;
@@ -54,10 +56,10 @@ struct Vulkan_Instance_Info
         inst_info.pNext = nullptr;
         inst_info.flags = 0;
         inst_info.pApplicationInfo = &app_info;
-        inst_info.enabledExtensionCount = static_cast<uint32_t>(extension_names.size());
-        inst_info.ppEnabledExtensionNames = extension_names.data();
-        inst_info.enabledLayerCount = static_cast<uint32_t>(layer_names.size());
-        inst_info.ppEnabledLayerNames = layer_names.data();
+        inst_info.enabledExtensionCount = static_cast<uint32_t>(instance_extension_names.size());
+        inst_info.ppEnabledExtensionNames = instance_extension_names.data();
+        inst_info.enabledLayerCount = static_cast<uint32_t>(instance_layer_names.size());
+        inst_info.ppEnabledLayerNames = instance_layer_names.data();
 
         VK_CHECK(vkCreateInstance(&inst_info, nullptr, &instance));
         return STATUS_OK;
@@ -149,10 +151,10 @@ struct Vulkan_Instance_Info
         device_info.pNext = nullptr;
         device_info.queueCreateInfoCount = 1;
         device_info.pQueueCreateInfos = &gr_queue_ci;
-        device_info.enabledExtensionCount = 0;
-        device_info.ppEnabledExtensionNames = nullptr;
-        device_info.enabledLayerCount = 0;
-        device_info.ppEnabledLayerNames = nullptr;
+        device_info.enabledExtensionCount = static_cast<uint32_t>(device_extension_names.size());
+        device_info.ppEnabledExtensionNames = device_extension_names.data();
+        device_info.enabledLayerCount = static_cast<uint32_t>(device_layer_names.size());
+        device_info.ppEnabledLayerNames = device_layer_names.data();
         device_info.pEnabledFeatures = nullptr;
 
         VK_CHECK(vkCreateDevice(system.primary.device, &device_info, nullptr, &logical_device.device));
@@ -373,10 +375,10 @@ struct Vulkan_Instance_Info
     }
 
     void cleanup() {
-
         for (Swapchain_Buffer& buf : swapchain_buffers) {
             vkDestroyImageView(logical_device.device, buf.view, nullptr);
         }
+        vkDestroySwapchainKHR(logical_device.device, swapchain, nullptr);
 
         vkFreeCommandBuffers(logical_device.device, logical_device.gr_cmd_pool, 1 /*TODO: gr_cmd_buf_alloc_info.commandBufferCount*/, &logical_device.gr_cmd_buf);
         vkDestroyCommandPool(logical_device.device, logical_device.gr_cmd_pool, nullptr);
