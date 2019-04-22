@@ -57,7 +57,7 @@ int main()
     STATUS_CHECK(vulkan.create_command_buffer());
 
     constexpr uint32_t desired_buf_strategy = 2;
-    STATUS_CHECK(vulkan.setup_swapchain(desired_buf_strategy, window_height, window_width));
+    STATUS_CHECK(vulkan.setup_swapchain(desired_buf_strategy, window_width, window_height));
     
     vulkan.cleanup();
     

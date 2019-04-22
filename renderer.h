@@ -59,7 +59,8 @@ struct Vulkan_Instance_Info
         inst_info.enabledLayerCount = static_cast<uint32_t>(layer_names.size());
         inst_info.ppEnabledLayerNames = layer_names.data();
 
-        return vkCreateInstance(&inst_info, nullptr, &instance);
+        VK_CHECK(vkCreateInstance(&inst_info, nullptr, &instance));
+        return STATUS_OK;
     }
 
     Status setup_primary_physical_device() {
@@ -154,7 +155,8 @@ struct Vulkan_Instance_Info
         device_info.ppEnabledLayerNames = nullptr;
         device_info.pEnabledFeatures = nullptr;
 
-        return vkCreateDevice(system.primary.device, &device_info, nullptr, &logical_device.device);
+        VK_CHECK(vkCreateDevice(system.primary.device, &device_info, nullptr, &logical_device.device));
+        return STATUS_OK;
     }
 
     Status create_command_pool() {
@@ -164,7 +166,8 @@ struct Vulkan_Instance_Info
         cmd_pool_create_info.pNext = nullptr;
         cmd_pool_create_info.queueFamilyIndex = system.primary.queue.gr_family_index;
         cmd_pool_create_info.flags = 0;
-        return vkCreateCommandPool(logical_device.device, &cmd_pool_create_info, nullptr, &logical_device.gr_cmd_pool);
+        VK_CHECK(vkCreateCommandPool(logical_device.device, &cmd_pool_create_info, nullptr, &logical_device.gr_cmd_pool));
+        return STATUS_OK;
     }
 
     Status create_command_buffer() {
@@ -174,8 +177,8 @@ struct Vulkan_Instance_Info
         gr_cmd_buf_alloc_info.commandPool = logical_device.gr_cmd_pool;
         gr_cmd_buf_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         gr_cmd_buf_alloc_info.commandBufferCount = 1;
-        VkCommandBuffer gr_cmd_buf = {};
-        return vkAllocateCommandBuffers(logical_device.device, &gr_cmd_buf_alloc_info, &gr_cmd_buf);
+        VK_CHECK(vkAllocateCommandBuffers(logical_device.device, &gr_cmd_buf_alloc_info, &logical_device.gr_cmd_buf));
+        return STATUS_OK;
     }
 
 #ifdef _WIN32
@@ -185,7 +188,8 @@ struct Vulkan_Instance_Info
         surface_create_info.pNext = nullptr;
         surface_create_info.hinstance = window.h_instance;
         surface_create_info.hwnd = window.h_window;
-        return vkCreateWin32SurfaceKHR(instance, &surface_create_info, nullptr, &surface);
+        VK_CHECK(vkCreateWin32SurfaceKHR(instance, &surface_create_info, nullptr, &surface));
+        return STATUS_OK;
     }
 #else
 #   error Unsupported platform
@@ -308,10 +312,9 @@ struct Vulkan_Instance_Info
         swapchain_create_info.imageArrayLayers = 1;
         swapchain_create_info.presentMode = swapchain_present_mode;
         swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
-        swapchain_create_info.clipped = true;
+        swapchain_create_info.clipped = VK_TRUE;
         swapchain_create_info.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
         swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
         swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapchain_create_info.queueFamilyIndexCount = 0;
         swapchain_create_info.pQueueFamilyIndices = nullptr;
