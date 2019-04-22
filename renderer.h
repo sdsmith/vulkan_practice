@@ -136,19 +136,19 @@ struct Vulkan_Instance_Info
     Status create_logical_device() {
         // TODO: setup the present queue (may be the same as the graphics queue)
         float queue_priorities[1] = { 0.0 };
-        VkDeviceQueueCreateInfo gr_queue_create_info = {};
-        gr_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        gr_queue_create_info.pNext = nullptr;
-        gr_queue_create_info.queueCount = 1;
-        gr_queue_create_info.pQueuePriorities = queue_priorities;
-        gr_queue_create_info.queueFamilyIndex = system.primary.queue.gr_family_index;
+        VkDeviceQueueCreateInfo gr_queue_ci = {};
+        gr_queue_ci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        gr_queue_ci.pNext = nullptr;
+        gr_queue_ci.queueCount = 1;
+        gr_queue_ci.pQueuePriorities = queue_priorities;
+        gr_queue_ci.queueFamilyIndex = system.primary.queue.gr_family_index;
 
         // Create logical device
         VkDeviceCreateInfo device_info = {};
         device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         device_info.pNext = nullptr;
         device_info.queueCreateInfoCount = 1;
-        device_info.pQueueCreateInfos = &gr_queue_create_info;
+        device_info.pQueueCreateInfos = &gr_queue_ci;
         device_info.enabledExtensionCount = 0;
         device_info.ppEnabledExtensionNames = nullptr;
         device_info.enabledLayerCount = 0;
@@ -161,12 +161,12 @@ struct Vulkan_Instance_Info
 
     Status create_command_pool() {
         // NOTE: Need one pool for each type of queue being used.
-        VkCommandPoolCreateInfo cmd_pool_create_info = {};
-        cmd_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        cmd_pool_create_info.pNext = nullptr;
-        cmd_pool_create_info.queueFamilyIndex = system.primary.queue.gr_family_index;
-        cmd_pool_create_info.flags = 0;
-        VK_CHECK(vkCreateCommandPool(logical_device.device, &cmd_pool_create_info, nullptr, &logical_device.gr_cmd_pool));
+        VkCommandPoolCreateInfo cmd_pool_ci = {};
+        cmd_pool_ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        cmd_pool_ci.pNext = nullptr;
+        cmd_pool_ci.queueFamilyIndex = system.primary.queue.gr_family_index;
+        cmd_pool_ci.flags = 0;
+        VK_CHECK(vkCreateCommandPool(logical_device.device, &cmd_pool_ci, nullptr, &logical_device.gr_cmd_pool));
         return STATUS_OK;
     }
 
@@ -183,12 +183,12 @@ struct Vulkan_Instance_Info
 
 #ifdef _WIN32
     Status create_surface(Window const& window) {
-        VkWin32SurfaceCreateInfoKHR surface_create_info = {};
-        surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-        surface_create_info.pNext = nullptr;
-        surface_create_info.hinstance = window.h_instance;
-        surface_create_info.hwnd = window.h_window;
-        VK_CHECK(vkCreateWin32SurfaceKHR(instance, &surface_create_info, nullptr, &surface));
+        VkWin32SurfaceCreateInfoKHR surface_ci = {};
+        surface_ci.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        surface_ci.pNext = nullptr;
+        surface_ci.hinstance = window.h_instance;
+        surface_ci.hwnd = window.h_window;
+        VK_CHECK(vkCreateWin32SurfaceKHR(instance, &surface_ci, nullptr, &surface));
         return STATUS_OK;
     }
 #else
@@ -299,25 +299,25 @@ struct Vulkan_Instance_Info
 
         // Create the swapchain
         //
-        VkSwapchainCreateInfoKHR swapchain_create_info = {};
-        swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapchain_create_info.pNext = nullptr;
-        swapchain_create_info.surface = surface;
-        swapchain_create_info.minImageCount = desired_num_swapchain_images;
-        swapchain_create_info.imageFormat = swapchain_format;
-        swapchain_create_info.imageExtent.width = swapchain_extent.width;
-        swapchain_create_info.imageExtent.height = swapchain_extent.height;
-        swapchain_create_info.preTransform = surface_pre_transform;
-        swapchain_create_info.compositeAlpha = composite_alpha;
-        swapchain_create_info.imageArrayLayers = 1;
-        swapchain_create_info.presentMode = swapchain_present_mode;
-        swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
-        swapchain_create_info.clipped = VK_TRUE;
-        swapchain_create_info.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-        swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        swapchain_create_info.queueFamilyIndexCount = 0;
-        swapchain_create_info.pQueueFamilyIndices = nullptr;
+        VkSwapchainCreateInfoKHR swapchain_ci = {};
+        swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapchain_ci.pNext = nullptr;
+        swapchain_ci.surface = surface;
+        swapchain_ci.minImageCount = desired_num_swapchain_images;
+        swapchain_ci.imageFormat = swapchain_format;
+        swapchain_ci.imageExtent.width = swapchain_extent.width;
+        swapchain_ci.imageExtent.height = swapchain_extent.height;
+        swapchain_ci.preTransform = surface_pre_transform;
+        swapchain_ci.compositeAlpha = composite_alpha;
+        swapchain_ci.imageArrayLayers = 1;
+        swapchain_ci.presentMode = swapchain_present_mode;
+        swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
+        swapchain_ci.clipped = VK_TRUE;
+        swapchain_ci.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+        swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapchain_ci.queueFamilyIndexCount = 0;
+        swapchain_ci.pQueueFamilyIndices = nullptr;
 
         // Account for seperate graphics and present queues
         uint32_t queue_family_indicies[2] = {
@@ -329,12 +329,12 @@ struct Vulkan_Instance_Info
             // If the graphics and present queues are from different queue families we have two options:
             // 1) explicitly transfer the ownership of images between the queues
             // 2) create the swapchain with imageSharingMode as VK_SHARING_MODE_CONCURRENT
-            swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-            swapchain_create_info.queueFamilyIndexCount = 2;
-            swapchain_create_info.pQueueFamilyIndices = queue_family_indicies;
+            swapchain_ci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            swapchain_ci.queueFamilyIndexCount = 2;
+            swapchain_ci.pQueueFamilyIndices = queue_family_indicies;
         }
 
-        VK_CHECK(vkCreateSwapchainKHR(logical_device.device, &swapchain_create_info, nullptr, &swapchain));
+        VK_CHECK(vkCreateSwapchainKHR(logical_device.device, &swapchain_ci, nullptr, &swapchain));
         
         // DOC:
         //
