@@ -11,6 +11,12 @@ struct Swapchain_Buffer {
     VkImageView view;
 };
 
+struct Depth_Buffer {
+	VkImage image;
+	VkImageView view;
+	VkDeviceMemory mem;
+};
+
 struct Vulkan_Instance_Info
 {
     VkApplicationInfo app_info;
@@ -26,6 +32,9 @@ struct Vulkan_Instance_Info
     VkSwapchainKHR swapchain;
     VkFormat swapchain_format;
     std::vector<Swapchain_Buffer> swapchain_buffers; //!< Swapchain image buffers
+	VkExtent2D swapchain_extent;
+
+	Depth_Buffer depth_buf;
 
     struct Logical_Device
     {
@@ -41,7 +50,8 @@ struct Vulkan_Instance_Info
         {
             VkPhysicalDevice device;
             std::vector<VkQueueFamilyProperties> queue_family_properties;
-            
+			VkPhysicalDeviceMemoryProperties memory_properties;
+
             struct Queue
             {
                 uint32_t gr_family_index;
@@ -88,6 +98,8 @@ struct Vulkan_Instance_Info
         vkGetPhysicalDeviceQueueFamilyProperties(system.primary.device, &queue_family_count, 
                                                  system.primary.queue_family_properties.data());
 
+		vkGetPhysicalDeviceMemoryProperties(system.primary.device, &system.primary.memory_properties);
+
         return STATUS_OK;
     }
 
@@ -106,7 +118,7 @@ struct Vulkan_Instance_Info
         gr_fam_index = std::numeric_limits<uint32_t>::max();
         present_fam_index = std::numeric_limits<uint32_t>::max();
 
-        for (size_t i = 0; i < queue_family_props.size(); ++i) {
+        for (uint32_t i = 0; i < queue_family_props.size(); ++i) {
             bool const supports_graphics = queue_family_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
 
             if (supports_graphics) {
@@ -233,7 +245,6 @@ struct Vulkan_Instance_Info
         //
         // NOTE: Width and height are either both 0xffff_ffff, or neither has that value.
         static constexpr uint32_t undefined_extent = 0xffff'ffff;
-        VkExtent2D swapchain_extent = {};
         if (surface_capabilities.currentExtent.width == undefined_extent) {
             assert(surface_capabilities.currentExtent.height == undefined_extent);
 
@@ -374,7 +385,90 @@ struct Vulkan_Instance_Info
         return STATUS_OK;
     }
 
+	bool memory_type_from_properties(uint32_t type_bits, VkFlags requirements_mask, uint32_t* type_index) {
+		// Seach memory types and find the first index with desired properties
+		for (uint32_t i = 0; i < system.primary.memory_properties.memoryTypeCount; ++i) {
+			if ((type_bits & 1) == 1) {
+				// Type is available
+
+				if ((system.primary.memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
+					*type_index = i;
+					return true;
+				}
+			}
+
+			type_bits >>= 1;
+		}
+
+		// No matches
+		return false;
+	}
+
+	Status setup_depth_buffer() {
+		static constexpr VkSampleCountFlagBits sample_flag_bits = VK_SAMPLE_COUNT_1_BIT;
+
+		VkImageCreateInfo image_ci = {};
+		image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		image_ci.pNext = nullptr;
+		image_ci.imageType = VK_IMAGE_TYPE_2D;
+		image_ci.format = VK_FORMAT_D16_UNORM;
+		image_ci.extent.width = swapchain_extent.width;
+		image_ci.extent.height = swapchain_extent.height;
+		image_ci.extent.depth = 1;
+		image_ci.mipLevels = 1;
+		image_ci.arrayLayers = 1;
+		image_ci.samples = sample_flag_bits;
+		image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		image_ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		image_ci.queueFamilyIndexCount = 0;
+		image_ci.pQueueFamilyIndices = nullptr;
+		image_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		image_ci.flags = 0;
+
+		VK_CHECK(vkCreateImage(logical_device.device, &image_ci, nullptr, &depth_buf.image));
+		VkMemoryRequirements mem_reqs;
+		vkGetImageMemoryRequirements(logical_device.device, depth_buf.image, &mem_reqs);
+
+		VkMemoryAllocateInfo mem_alloc = {};
+		mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		mem_alloc.pNext = nullptr;
+		mem_alloc.allocationSize = mem_reqs.size;
+		if (!memory_type_from_properties(mem_reqs.memoryTypeBits, 0, &mem_alloc.memoryTypeIndex)) {
+			log_error("Unable to find suitable memory for depth buffer.\n");
+			return !STATUS_OK;
+		}
+
+		VK_CHECK(vkAllocateMemory(logical_device.device, &mem_alloc, nullptr, &depth_buf.mem));
+
+		VK_CHECK(vkBindImageMemory(logical_device.device, depth_buf.image, depth_buf.mem, 0));
+
+		VkImageViewCreateInfo view_ci = {};
+		view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		view_ci.pNext = nullptr;
+		view_ci.image = depth_buf.image;
+		view_ci.format = VK_FORMAT_D16_UNORM;
+		view_ci.components.r = VK_COMPONENT_SWIZZLE_R;
+		view_ci.components.g = VK_COMPONENT_SWIZZLE_G;
+		view_ci.components.b = VK_COMPONENT_SWIZZLE_B;
+		view_ci.components.a = VK_COMPONENT_SWIZZLE_A;
+		view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		view_ci.subresourceRange.baseMipLevel = 0;
+		view_ci.subresourceRange.levelCount = 1;
+		view_ci.subresourceRange.baseArrayLayer = 0;
+		view_ci.subresourceRange.layerCount = 1;
+		view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		view_ci.flags = 0;
+
+		VK_CHECK(vkCreateImageView(logical_device.device, &view_ci, nullptr, &depth_buf.view));
+
+		return STATUS_OK;
+	}
+
     void cleanup() {
+		vkFreeMemory(logical_device.device, depth_buf.mem, nullptr);
+		vkDestroyImageView(logical_device.device, depth_buf.view, nullptr);
+		vkDestroyImage(logical_device.device, depth_buf.image, nullptr);
+
         for (Swapchain_Buffer& buf : swapchain_buffers) {
             vkDestroyImageView(logical_device.device, buf.view, nullptr);
         }
