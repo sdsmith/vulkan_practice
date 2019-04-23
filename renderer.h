@@ -349,7 +349,7 @@ struct Vulkan_Instance_Info
 
         VK_CHECK(vkCreateSwapchainKHR(logical_device.device, &swapchain_ci, nullptr, &swapchain));
         
-        // DOC:
+        // Get the swapchain image handles
         //
         uint32_t swapchain_image_count = 0;
         VK_CHECK(vkGetSwapchainImagesKHR(logical_device.device, swapchain, &swapchain_image_count, nullptr));
@@ -361,6 +361,8 @@ struct Vulkan_Instance_Info
             swapchain_buffers[i].image = swapchain_images[i];
         }
 
+        // Create image views for each swapchain image
+        //
         for (uint32_t i = 0; i < swapchain_image_count; ++i) {
             VkImageViewCreateInfo color_image_view_ci = {};
             color_image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
