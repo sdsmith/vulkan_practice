@@ -51,6 +51,9 @@ struct Vulkan_Instance_Info
     std::vector<VkDescriptorSetLayout> desc_set_layouts;
     VkPipelineLayout pipeline_layout;
 
+    VkDescriptorPool desc_pool;
+    std::vector<VkDescriptorSet> desc_set;
+
     struct Logical_Device
     {
         VkDevice device;
@@ -93,7 +96,7 @@ struct Vulkan_Instance_Info
     Status setup_depth_buffer();
     Status setup_model_view_projection();
     Status setup_uniform_buffer();
-    Status setup_pipeline_layout();
+    Status setup_pipeline();
 
     void cleanup();
 };

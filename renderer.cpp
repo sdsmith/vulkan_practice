@@ -474,7 +474,7 @@ Status Vulkan_Instance_Info::setup_uniform_buffer() {
     return STATUS_OK;
 }
 
-Status Vulkan_Instance_Info::setup_pipeline_layout() {
+Status Vulkan_Instance_Info::setup_pipeline() {
     // Descriptor set layouts
     //
     // Layout binding
@@ -504,6 +504,33 @@ Status Vulkan_Instance_Info::setup_pipeline_layout() {
     pipeline_layout_ci.pSetLayouts = desc_set_layouts.data();
 
     VK_CHECK(vkCreatePipelineLayout(logical_device.device, &pipeline_layout_ci, nullptr, &pipeline_layout));
+
+    // Create descriptor pool
+    //
+    VkDescriptorPoolSize type_count[1];
+    type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    type_count[0].descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo desc_pool_ci = {};
+    desc_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    desc_pool_ci.pNext = nullptr;
+    desc_pool_ci.maxSets = 1;
+    desc_pool_ci.poolSizeCount = 1;
+    desc_pool_ci.pPoolSizes = type_count;
+    VK_CHECK(vkCreateDescriptorPool(logical_device.device, &desc_pool_ci, nullptr, &desc_pool));
+
+    // Allocate descriptor sets
+    //
+    VkDescriptorSetAllocateInfo alloc_info[1];
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info[0].pNext = nullptr;
+    alloc_info[0].descriptorPool = desc_pool;
+    alloc_info[0].descriptorSetCount = num_descriptor_sets;
+    alloc_info[0].pSetLayouts = desc_set_layouts.data();
+    desc_set.resize(num_descriptor_sets);
+    VK_CHECK(vkAllocateDescriptorSets(logical_device.device, alloc_info, desc_set.data()));
+
+    // TODO: Update the descriptor set
 
     return STATUS_OK;
 }
