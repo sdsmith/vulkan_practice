@@ -474,7 +474,47 @@ Status Vulkan_Instance_Info::setup_uniform_buffer() {
     return STATUS_OK;
 }
 
+// TODO: rename
+Status Vulkan_Instance_Info::setup_pipeline_layout() {
+    // Descriptor set layouts
+    //
+    // Layout binding
+    VkDescriptorSetLayoutBinding layout_binding = {};
+    layout_binding.binding = 0;
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_binding.descriptorCount = 1;
+    layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_binding.pImmutableSamplers = nullptr;
+
+    // Descriptor set layout
+    constexpr uint32_t num_descriptor_sets = 1;
+    VkDescriptorSetLayoutCreateInfo desc_layout_ci = {};
+    desc_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    desc_layout_ci.pNext = nullptr;
+    desc_layout_ci.bindingCount = 1;
+    desc_layout_ci.pBindings = &layout_binding;
+    desc_set_layouts.resize(num_descriptor_sets);
+    VK_CHECK(vkCreateDescriptorSetLayout(logical_device.device, &desc_layout_ci, nullptr, desc_set_layouts.data()));
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = nullptr;
+    pipeline_layout_ci.pushConstantRangeCount = 0;
+    pipeline_layout_ci.pPushConstantRanges = nullptr;
+    pipeline_layout_ci.setLayoutCount = num_descriptor_sets;
+    pipeline_layout_ci.pSetLayouts = desc_set_layouts.data();
+
+    VK_CHECK(vkCreatePipelineLayout(logical_device.device, &pipeline_layout_ci, nullptr, &pipeline_layout));
+
+    return STATUS_OK;
+}
+
 void Vulkan_Instance_Info::cleanup() {
+    vkDestroyPipelineLayout(logical_device.device, pipeline_layout, nullptr);
+    for (VkDescriptorSetLayout& desc_set_layout : desc_set_layouts) {
+        vkDestroyDescriptorSetLayout(logical_device.device, desc_set_layout, nullptr);
+    }
+
     vkFreeMemory(logical_device.device, depth_buf.mem, nullptr);
     vkDestroyImageView(logical_device.device, depth_buf.view, nullptr);
     vkDestroyImage(logical_device.device, depth_buf.image, nullptr);

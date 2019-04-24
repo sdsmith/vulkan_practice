@@ -47,6 +47,9 @@ struct Vulkan_Instance_Info
     glm::mat4 mvp;
 
     Uniform_Data uniform_data;
+    
+    std::vector<VkDescriptorSetLayout> desc_set_layouts;
+    VkPipelineLayout pipeline_layout;
 
     struct Logical_Device
     {
@@ -90,6 +93,7 @@ struct Vulkan_Instance_Info
     Status setup_depth_buffer();
     Status setup_model_view_projection();
     Status setup_uniform_buffer();
+    Status setup_pipeline_layout();
 
     void cleanup();
 };

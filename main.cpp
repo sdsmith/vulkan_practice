@@ -63,6 +63,7 @@ int main()
     STATUS_CHECK(vulkan.setup_swapchain(desired_buf_strategy, window_width, window_height));
 	STATUS_CHECK(vulkan.setup_depth_buffer());
     STATUS_CHECK(vulkan.setup_model_view_projection());
+    STATUS_CHECK(vulkan.setup_pipeline_layout());
 
     vulkan.cleanup();
     return 0;
