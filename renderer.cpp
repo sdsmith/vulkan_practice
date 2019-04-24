@@ -474,7 +474,6 @@ Status Vulkan_Instance_Info::setup_uniform_buffer() {
     return STATUS_OK;
 }
 
-// TODO: rename
 Status Vulkan_Instance_Info::setup_pipeline_layout() {
     // Descriptor set layouts
     //
