@@ -24,6 +24,8 @@ struct Uniform_Data {
 
 struct Vulkan_Instance_Info
 {
+    static constexpr VkSampleCountFlagBits num_samples = VK_SAMPLE_COUNT_1_BIT;
+
     VkApplicationInfo app_info;
 
     VkInstance instance;
@@ -53,7 +55,9 @@ struct Vulkan_Instance_Info
     VkPipelineLayout pipeline_layout;
 
     VkDescriptorPool desc_pool;
-    std::vector<VkDescriptorSet> desc_set;
+    std::vector<VkDescriptorSet> desc_sets;
+
+    VkRenderPass render_pass;
 
     struct Logical_Device
     {
@@ -98,6 +102,7 @@ struct Vulkan_Instance_Info
     Status setup_model_view_projection();
     Status setup_uniform_buffer();
     Status setup_pipeline();
+    Status setup_render_pass();
 
     void cleanup();
 };
