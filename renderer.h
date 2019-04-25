@@ -19,10 +19,13 @@ struct Depth_Buffer {
 struct Uniform_Data {
     VkBuffer buf;
     VkDeviceMemory mem;
+    VkDescriptorBufferInfo buf_info;
 };
 
 struct Vulkan_Instance_Info
 {
+    static constexpr VkSampleCountFlagBits num_samples = VK_SAMPLE_COUNT_1_BIT;
+
     VkApplicationInfo app_info;
 
     VkInstance instance;
@@ -50,6 +53,11 @@ struct Vulkan_Instance_Info
     
     std::vector<VkDescriptorSetLayout> desc_set_layouts;
     VkPipelineLayout pipeline_layout;
+
+    VkDescriptorPool desc_pool;
+    std::vector<VkDescriptorSet> desc_sets;
+
+    VkRenderPass render_pass;
 
     struct Logical_Device
     {
@@ -93,7 +101,8 @@ struct Vulkan_Instance_Info
     Status setup_depth_buffer();
     Status setup_model_view_projection();
     Status setup_uniform_buffer();
-    Status setup_pipeline_layout();
+    Status setup_pipeline();
+    Status setup_render_pass();
 
     void cleanup();
 };

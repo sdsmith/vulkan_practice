@@ -32,7 +32,7 @@ Status Vulkan_Instance_Info::setup_primary_physical_device() {
     VK_CHECK(vkEnumeratePhysicalDevices(instance, &dev_count, system.physical_devices.data()));
     system.primary.device = system.physical_devices[0];
 
-    // NOTE: A device defines types of queues that can perform specific work. 
+    // NOTE: A device defines types of queues that can perform specific work.
     // Each queue type is called a queue family. Each queue family may have one
     // or more queues available for use. A queue family may support one or more
     // type of work.
@@ -418,7 +418,7 @@ Status Vulkan_Instance_Info::setup_depth_buffer() {
 
 Status Vulkan_Instance_Info::setup_model_view_projection() {
     projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
-    view = glm::lookAt(glm::vec3(-5, 3, -10), // camera pos in world space 
+    view = glm::lookAt(glm::vec3(-5, 3, -10), // camera pos in world space
         glm::vec3(0, 0, 0),    // look at origin
         glm::vec3(0, -1, 0));  // head is up
     model = glm::mat4(1.0f);
@@ -461,7 +461,7 @@ Status Vulkan_Instance_Info::setup_uniform_buffer() {
     }
 
     VK_CHECK(vkAllocateMemory(logical_device.device, &mem_alloc, nullptr, &uniform_data.mem));
-    
+
     // Initialize the uniform buffer
     //
     void* data = nullptr;
@@ -471,10 +471,16 @@ Status Vulkan_Instance_Info::setup_uniform_buffer() {
 
     VK_CHECK(vkBindBufferMemory(logical_device.device, uniform_data.buf, uniform_data.mem, 0));
 
+    // Record the uniform buffer information
+    //
+    uniform_data.buf_info.buffer = uniform_data.buf;
+    uniform_data.buf_info.offset = 0;
+    uniform_data.buf_info.range = sizeof(mvp);
+
     return STATUS_OK;
 }
 
-Status Vulkan_Instance_Info::setup_pipeline_layout() {
+Status Vulkan_Instance_Info::setup_pipeline() {
     // Descriptor set layouts
     //
     // Layout binding
@@ -505,14 +511,134 @@ Status Vulkan_Instance_Info::setup_pipeline_layout() {
 
     VK_CHECK(vkCreatePipelineLayout(logical_device.device, &pipeline_layout_ci, nullptr, &pipeline_layout));
 
+    // Create descriptor pool
+    //
+    VkDescriptorPoolSize type_count[1];
+    type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    type_count[0].descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo desc_pool_ci = {};
+    desc_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    desc_pool_ci.pNext = nullptr;
+    desc_pool_ci.maxSets = 1;
+    desc_pool_ci.poolSizeCount = 1;
+    desc_pool_ci.pPoolSizes = type_count;
+    VK_CHECK(vkCreateDescriptorPool(logical_device.device, &desc_pool_ci, nullptr, &desc_pool));
+
+    // Allocate descriptor sets
+    //
+    VkDescriptorSetAllocateInfo alloc_info[1];
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info[0].pNext = nullptr;
+    alloc_info[0].descriptorPool = desc_pool;
+    alloc_info[0].descriptorSetCount = num_descriptor_sets;
+    alloc_info[0].pSetLayouts = desc_set_layouts.data();
+    desc_sets.resize(num_descriptor_sets);
+    VK_CHECK(vkAllocateDescriptorSets(logical_device.device, alloc_info, desc_sets.data()));
+
+    // Write the descriptor buffer info the device descriptor memory
+    //
+    // NOTE: It is likely in the devices memory, but not guaranteed to be.
+    //
+    VkWriteDescriptorSet writes[1];
+    writes[0] = {};
+    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[0].pNext = nullptr;
+    writes[0].dstSet = desc_sets[0];
+    writes[0].descriptorCount = 1;
+    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[0].pBufferInfo = &uniform_data.buf_info;
+    writes[0].dstArrayElement = 0;
+    writes[0].dstBinding = 0;
+    vkUpdateDescriptorSets(logical_device.device, 1, writes, 0, nullptr);
+
+    return STATUS_OK;
+}
+
+Status Vulkan_Instance_Info::setup_render_pass() {
+    /*
+     * Render pass consists of a collection of attachements, subpasses, and dependencies.
+     */
+
+    // Attachments
+    //
+    // One for color and one for depth.
+    constexpr int num_attachments = 2;
+    constexpr int color_attachment_index = 0;
+    constexpr int depth_attachment_index = 1;
+
+    VkAttachmentDescription attachments[num_attachments];
+
+    attachments[color_attachment_index].format = swapchain_format;
+    attachments[color_attachment_index].samples = num_samples;
+    attachments[color_attachment_index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // Clear existing buf content
+    attachments[color_attachment_index].storeOp = VK_ATTACHMENT_STORE_OP_STORE; // Keep the buf populated so we can display content later
+    attachments[color_attachment_index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[color_attachment_index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[color_attachment_index].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;      // Don't care what the start format is
+    attachments[color_attachment_index].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;  // Final format should be optimal for presenting
+    attachments[color_attachment_index].flags = 0;
+
+    attachments[depth_attachment_index].format = swapchain_format;
+    attachments[depth_attachment_index].samples = num_samples;
+    attachments[depth_attachment_index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[depth_attachment_index].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[depth_attachment_index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[depth_attachment_index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[depth_attachment_index].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;      // Don't care what the start format is
+    attachments[depth_attachment_index].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;  // Final format should be optimal for depth buffer
+    attachments[depth_attachment_index].flags = 0;
+
+    // Subpasses
+    //
+    VkAttachmentReference color_ref = {};
+    color_ref.attachment = color_attachment_index; // Index into the att
+    color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depth_ref = {};
+    depth_ref.attachment = depth_attachment_index;
+    depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // Is graphics subpass
+    subpass.flags = 0;
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = nullptr;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_ref;
+    subpass.pResolveAttachments = nullptr;
+    subpass.pDepthStencilAttachment = &depth_ref;
+    subpass.preserveAttachmentCount = 0;
+    subpass.pPreserveAttachments = nullptr;
+
+    // Render pass
+    //
+    VkRenderPassCreateInfo render_pass_ci = {};
+    render_pass_ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_ci.pNext = nullptr;
+    render_pass_ci.attachmentCount = num_attachments;
+    render_pass_ci.pAttachments = attachments;
+    render_pass_ci.subpassCount = 1;
+    render_pass_ci.pSubpasses = &subpass;
+    render_pass_ci.dependencyCount = 0;
+    render_pass_ci.pDependencies = nullptr;
+    VK_CHECK(vkCreateRenderPass(logical_device.device, &render_pass_ci, nullptr, &render_pass));
+
     return STATUS_OK;
 }
 
 void Vulkan_Instance_Info::cleanup() {
+
+    vkDestroyRenderPass(logical_device.device, render_pass, nullptr);
+    vkDestroyDescriptorPool(logical_device.device, desc_pool, nullptr);
+
     vkDestroyPipelineLayout(logical_device.device, pipeline_layout, nullptr);
     for (VkDescriptorSetLayout& desc_set_layout : desc_set_layouts) {
         vkDestroyDescriptorSetLayout(logical_device.device, desc_set_layout, nullptr);
     }
+
+    vkFreeMemory(logical_device.device, uniform_data.mem, nullptr);
+    vkDestroyBuffer(logical_device.device, uniform_data.buf, nullptr);
 
     vkFreeMemory(logical_device.device, depth_buf.mem, nullptr);
     vkDestroyImageView(logical_device.device, depth_buf.view, nullptr);
