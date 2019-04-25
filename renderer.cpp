@@ -471,6 +471,12 @@ Status Vulkan_Instance_Info::setup_uniform_buffer() {
 
     VK_CHECK(vkBindBufferMemory(logical_device.device, uniform_data.buf, uniform_data.mem, 0));
 
+    // Record the uniform buffer information
+    //
+    uniform_data.buf_info.buffer = uniform_data.buf;
+    uniform_data.buf_info.offset = 0;
+    uniform_data.buf_info.range = sizeof(mvp);
+
     return STATUS_OK;
 }
 
@@ -530,7 +536,21 @@ Status Vulkan_Instance_Info::setup_pipeline() {
     desc_set.resize(num_descriptor_sets);
     VK_CHECK(vkAllocateDescriptorSets(logical_device.device, alloc_info, desc_set.data()));
 
-    // TODO: Update the descriptor set
+    // Write the descriptor buffer info the device descriptor memory
+    //
+    // NOTE: It is likely in the devices memory, but not guaranteed to be.
+    //
+    VkWriteDescriptorSet writes[1];
+    writes[0] = {};
+    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[0].pNext = nullptr;
+    writes[0].dstSet = desc_set[0];
+    writes[0].descriptorCount = 1;
+    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[0].pBufferInfo = &uniform_data.buf_info;
+    writes[0].dstArrayElement = 0;
+    writes[0].dstBinding = 0;
+    vkUpdateDescriptorSets(logical_device.device, 1, writes, 0, nullptr);
 
     return STATUS_OK;
 }

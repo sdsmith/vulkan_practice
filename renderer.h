@@ -19,6 +19,7 @@ struct Depth_Buffer {
 struct Uniform_Data {
     VkBuffer buf;
     VkDeviceMemory mem;
+    VkDescriptorBufferInfo buf_info;
 };
 
 struct Vulkan_Instance_Info
