@@ -59,6 +59,8 @@ struct Vulkan_Instance_Info
 
     VkRenderPass render_pass;
 
+	VkPipelineShaderStageCreateInfo shader_stages_ci[2];
+
     struct Logical_Device
     {
         VkDevice device;
@@ -103,6 +105,7 @@ struct Vulkan_Instance_Info
     Status setup_uniform_buffer();
     Status setup_pipeline();
     Status setup_render_pass();
+	Status setup_shaders();
 
     void cleanup();
 };

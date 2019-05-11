@@ -4,6 +4,7 @@
 #include "glm/ext/matrix_transform.hpp" // glm::lookAt
 #include <algorithm>
 #include <cassert>
+#include <fstream>
 
 Status Vulkan_Instance_Info::create_instance() {
     VkInstanceCreateInfo inst_info = {};
@@ -627,7 +628,74 @@ Status Vulkan_Instance_Info::setup_render_pass() {
     return STATUS_OK;
 }
 
+namespace {
+	Status load_spirv(char const* path, std::vector<uint32_t>* buf) {
+		assert(path);
+		assert(buf);
+
+		std::ifstream f(path, std::ios_base::in | std::ios_base::binary);
+		assert(f.is_open() && !f.fail());
+		
+		f.seekg(0, f.end);
+		const std::streampos byte_length = f.tellg();
+		f.seekg(0, f.beg);
+		
+		buf->clear();
+		buf->resize(static_cast<size_t>(std::ceilf(byte_length / static_cast<float>(sizeof(uint32_t)))), 0U);
+		f.read(reinterpret_cast<char*>(buf->data()), byte_length);
+
+		f.close();
+
+		return STATUS_OK;
+	}
+}
+
+Status Vulkan_Instance_Info::setup_shaders() {
+	Status status;
+	VkShaderModuleCreateInfo module_ci = {};
+
+	std::vector<uint32_t> shader_vert_spv;
+	status = load_spirv("simple.vert.spv", &shader_vert_spv);
+	if (status != STATUS_OK) { return status; }
+
+	shader_stages_ci[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shader_stages_ci[0].pNext = nullptr;
+	shader_stages_ci[0].pSpecializationInfo = nullptr;
+	shader_stages_ci[0].flags = 0;
+	shader_stages_ci[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+	shader_stages_ci[0].pName = "simple";
+
+	module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	module_ci.pNext = nullptr;
+	module_ci.flags = 0;
+	module_ci.codeSize = shader_vert_spv.size() * sizeof(decltype(shader_vert_spv)::value_type);
+	module_ci.pCode = shader_vert_spv.data();
+	VK_CHECK(vkCreateShaderModule(logical_device.device, &module_ci, nullptr, &shader_stages_ci[0].module));
+
+	std::vector<uint32_t> shader_frag_spv;
+	status = load_spirv("simple.frag.spv", &shader_frag_spv);
+	if (status != STATUS_OK) { return status; }
+
+	shader_stages_ci[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shader_stages_ci[1].pNext = nullptr;
+	shader_stages_ci[1].pSpecializationInfo = nullptr;
+	shader_stages_ci[1].flags = 0;
+	shader_stages_ci[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	shader_stages_ci[1].pName = "simple";
+
+	module_ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	module_ci.pNext = nullptr;
+	module_ci.flags = 0;
+	module_ci.codeSize = shader_frag_spv.size() * sizeof(decltype(shader_frag_spv)::value_type);
+	module_ci.pCode = shader_frag_spv.data();
+	VK_CHECK(vkCreateShaderModule(logical_device.device, &module_ci, nullptr, &shader_stages_ci[1].module));
+
+	return STATUS_OK;
+}
+
 void Vulkan_Instance_Info::cleanup() {
+	vkDestroyShaderModule(logical_device.device, shader_stages_ci[0].module, nullptr);
+	vkDestroyShaderModule(logical_device.device, shader_stages_ci[1].module, nullptr);
 
     vkDestroyRenderPass(logical_device.device, render_pass, nullptr);
     vkDestroyDescriptorPool(logical_device.device, desc_pool, nullptr);

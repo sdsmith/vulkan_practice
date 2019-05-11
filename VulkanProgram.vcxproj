@@ -36,6 +36,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="glsl_to_spirv.bat" />
+    <None Include="simple.frag" />
+    <None Include="simple.vert" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5A4234BA-9B20-4CD4-B9F0-D7BC800EDB93}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -88,15 +93,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <CustomBuildAfterTargets>BuildCompile</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <CustomBuildAfterTargets>BuildCompile</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <CustomBuildAfterTargets>BuildCompile</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <CustomBuildAfterTargets>BuildCompile</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -115,6 +124,18 @@
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.vert -o $(SolutionDir)simple.vert.spv
+$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.frag -o $(SolutionDir)simple.frag.spv</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -133,6 +154,18 @@
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.vert -o $(SolutionDir)simple.vert.spv
+$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.frag -o $(SolutionDir)simple.frag.spv</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -143,7 +176,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)external\glm;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -155,6 +188,18 @@
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.vert -o $(SolutionDir)simple.vert.spv
+$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.frag -o $(SolutionDir)simple.frag.spv</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -165,7 +210,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>VK_USE_PLATFORM_WIN32_KHR;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)external\glm;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -177,6 +222,18 @@
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.vert -o $(SolutionDir)simple.vert.spv
+$(VULKAN_SDK)\Bin\glslangvalidator -V $(SolutionDir)simple.frag -o $(SolutionDir)simple.frag.spv</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
