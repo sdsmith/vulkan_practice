@@ -61,6 +61,8 @@ struct Vulkan_Instance_Info
 
 	VkPipelineShaderStageCreateInfo shader_stages_ci[2];
 
+	std::vector<VkFramebuffer> framebuffers;
+
     struct Logical_Device
     {
         VkDevice device;
@@ -106,6 +108,7 @@ struct Vulkan_Instance_Info
     Status setup_pipeline();
     Status setup_render_pass();
 	Status setup_shaders();
+	Status setup_framebuffer();
 
     void cleanup();
 };

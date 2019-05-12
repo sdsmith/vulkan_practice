@@ -67,6 +67,7 @@ int main()
     STATUS_CHECK(vulkan.setup_pipeline());
     STATUS_CHECK(vulkan.setup_render_pass());
 	STATUS_CHECK(vulkan.setup_shaders());
+	STATUS_CHECK(vulkan.setup_framebuffer());
 
     vulkan.cleanup();
     return 0;

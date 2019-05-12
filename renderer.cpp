@@ -568,27 +568,27 @@ Status Vulkan_Instance_Info::setup_render_pass() {
     constexpr int color_attachment_index = 0;
     constexpr int depth_attachment_index = 1;
 
-    VkAttachmentDescription attachments[num_attachments];
+    VkAttachmentDescription attachment_descs[num_attachments];
 
-    attachments[color_attachment_index].format = swapchain_format;
-    attachments[color_attachment_index].samples = num_samples;
-    attachments[color_attachment_index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // Clear existing buf content
-    attachments[color_attachment_index].storeOp = VK_ATTACHMENT_STORE_OP_STORE; // Keep the buf populated so we can display content later
-    attachments[color_attachment_index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[color_attachment_index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[color_attachment_index].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;      // Don't care what the start format is
-    attachments[color_attachment_index].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;  // Final format should be optimal for presenting
-    attachments[color_attachment_index].flags = 0;
+    attachment_descs[color_attachment_index].format = swapchain_format;
+    attachment_descs[color_attachment_index].samples = num_samples;
+    attachment_descs[color_attachment_index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // Clear existing buf content
+    attachment_descs[color_attachment_index].storeOp = VK_ATTACHMENT_STORE_OP_STORE; // Keep the buf populated so we can display content later
+    attachment_descs[color_attachment_index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_descs[color_attachment_index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment_descs[color_attachment_index].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;      // Don't care what the start format is
+    attachment_descs[color_attachment_index].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;  // Final format should be optimal for presenting
+    attachment_descs[color_attachment_index].flags = 0;
 
-    attachments[depth_attachment_index].format = swapchain_format;
-    attachments[depth_attachment_index].samples = num_samples;
-    attachments[depth_attachment_index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[depth_attachment_index].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[depth_attachment_index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[depth_attachment_index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[depth_attachment_index].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;      // Don't care what the start format is
-    attachments[depth_attachment_index].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;  // Final format should be optimal for depth buffer
-    attachments[depth_attachment_index].flags = 0;
+	attachment_descs[depth_attachment_index].format = VK_FORMAT_D16_UNORM;// TODO: should it be swapchain_format?;
+    attachment_descs[depth_attachment_index].samples = num_samples;
+    attachment_descs[depth_attachment_index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachment_descs[depth_attachment_index].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_descs[depth_attachment_index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment_descs[depth_attachment_index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment_descs[depth_attachment_index].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;      // Don't care what the start format is
+    attachment_descs[depth_attachment_index].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;  // Final format should be optimal for depth buffer
+    attachment_descs[depth_attachment_index].flags = 0;
 
     // Subpasses
     //
@@ -618,7 +618,7 @@ Status Vulkan_Instance_Info::setup_render_pass() {
     render_pass_ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     render_pass_ci.pNext = nullptr;
     render_pass_ci.attachmentCount = num_attachments;
-    render_pass_ci.pAttachments = attachments;
+    render_pass_ci.pAttachments = attachment_descs;
     render_pass_ci.subpassCount = 1;
     render_pass_ci.pSubpasses = &subpass;
     render_pass_ci.dependencyCount = 0;
@@ -693,7 +693,41 @@ Status Vulkan_Instance_Info::setup_shaders() {
 	return STATUS_OK;
 }
 
+Status Vulkan_Instance_Info::setup_framebuffer() {
+	/*
+	 * Attachement 0 is the swapchain buffer.
+	 * Attachement 1 is the depth buffer (shared amung the framebuffers).
+     */
+
+	static constexpr uint32_t num_attachments = 2;
+	VkImageView attachment_views[num_attachments];
+	attachment_views[1] = depth_buf.view;
+
+	VkFramebufferCreateInfo fb_ci = {};
+	fb_ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	fb_ci.pNext = nullptr;
+	fb_ci.renderPass = render_pass;
+	fb_ci.attachmentCount = num_attachments;
+	fb_ci.pAttachments = attachment_views;
+	fb_ci.width = swapchain_extent.width; // TODO: Might need to make this the actual window dim, not the extent
+	fb_ci.height = swapchain_extent.height;
+	fb_ci.layers = 1;
+
+	const size_t num_swapchain_images = swapchain_buffers.size();
+	framebuffers.resize(num_swapchain_images);
+	for (uint32_t i = 0; i < num_swapchain_images; ++i) {
+		attachment_views[0] = swapchain_buffers[i].view;
+		VK_CHECK(vkCreateFramebuffer(logical_device.device, &fb_ci, nullptr, &framebuffers[i]));
+	}
+
+	return STATUS_OK;
+}
+
 void Vulkan_Instance_Info::cleanup() {
+	for (uint32_t i = 0; i < framebuffers.size(); ++i) {
+		vkDestroyFramebuffer(logical_device.device, framebuffers[i], nullptr);
+	}
+
 	vkDestroyShaderModule(logical_device.device, shader_stages_ci[0].module, nullptr);
 	vkDestroyShaderModule(logical_device.device, shader_stages_ci[1].module, nullptr);
 
