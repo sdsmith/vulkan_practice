@@ -22,6 +22,11 @@ struct Uniform_Data {
     VkDescriptorBufferInfo buf_info;
 };
 
+struct Vertex_Buffer {
+	VkBuffer buf;
+	VkDeviceMemory mem;
+};
+
 struct Vulkan_Instance_Info
 {
     static constexpr VkSampleCountFlagBits num_samples = VK_SAMPLE_COUNT_1_BIT;
@@ -62,6 +67,13 @@ struct Vulkan_Instance_Info
 	VkPipelineShaderStageCreateInfo shader_stages_ci[2];
 
 	std::vector<VkFramebuffer> framebuffers;
+
+	Vertex_Buffer vertex_buffer;
+	VkVertexInputBindingDescription vertex_input_binding_desc;
+	VkVertexInputAttributeDescription vertex_input_attribs[2];
+
+	VkSemaphore image_acquired_sema;
+	uint32_t current_image;
 
     struct Logical_Device
     {
@@ -109,6 +121,10 @@ struct Vulkan_Instance_Info
     Status setup_render_pass();
 	Status setup_shaders();
 	Status setup_framebuffer();
+	Status setup_vertex_buffer();
 
     void cleanup();
+
+	VkResult exec_begin_gr_command_buffer();
+	VkResult exec_end_gr_command_buffer();
 };

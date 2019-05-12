@@ -2,6 +2,7 @@
 
 #include "glm/ext/matrix_clip_space.hpp" // glm::perspective
 #include "glm/ext/matrix_transform.hpp" // glm::lookAt
+#include "vulkan_cube_data.h"
 #include <algorithm>
 #include <cassert>
 #include <fstream>
@@ -561,6 +562,8 @@ Status Vulkan_Instance_Info::setup_render_pass() {
      * Render pass consists of a collection of attachements, subpasses, and dependencies.
      */
 
+	// TODO: semaphore missing???????
+
     // Attachments
     //
     // One for color and one for depth.
@@ -723,7 +726,116 @@ Status Vulkan_Instance_Info::setup_framebuffer() {
 	return STATUS_OK;
 }
 
+Status Vulkan_Instance_Info::setup_vertex_buffer() {
+	VkBufferCreateInfo vert_buf_ci = {};
+	vert_buf_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	vert_buf_ci.pNext = nullptr;
+	vert_buf_ci.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	vert_buf_ci.size = sizeof(Cube_Model::vertex_buffer_solid_face_colors_data);
+	vert_buf_ci.queueFamilyIndexCount = 0;
+	vert_buf_ci.pQueueFamilyIndices = nullptr;
+	vert_buf_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	vert_buf_ci.flags = 0;
+	VK_CHECK(vkCreateBuffer(logical_device.device, &vert_buf_ci, nullptr, &vertex_buffer.buf));
+
+	VkMemoryRequirements mem_reqs = {};
+	vkGetBufferMemoryRequirements(logical_device.device, vertex_buffer.buf, &mem_reqs);
+
+	VkMemoryAllocateInfo alloc_info = {};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.pNext = nullptr;
+	alloc_info.memoryTypeIndex = 0;
+	alloc_info.allocationSize = mem_reqs.size;
+	if (!memory_type_from_properties(mem_reqs.memoryTypeBits,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&alloc_info.memoryTypeIndex))
+	{
+		log_error("No mappable coherent memory");
+		return !STATUS_OK;
+	}
+
+	VK_CHECK(vkAllocateMemory(logical_device.device, &alloc_info, nullptr, &vertex_buffer.mem));
+
+	uint8_t* pData = nullptr;
+	VK_CHECK(vkMapMemory(logical_device.device, vertex_buffer.mem, 0, mem_reqs.size, 0, reinterpret_cast<void**>(&pData)));
+
+	memcpy(pData, Cube_Model::vertex_buffer_solid_face_colors_data, 
+		sizeof(Cube_Model::vertex_buffer_solid_face_colors_data));
+
+	vkUnmapMemory(logical_device.device, vertex_buffer.mem);
+
+	VK_CHECK(vkBindBufferMemory(logical_device.device, vertex_buffer.buf, vertex_buffer.mem, 0));
+
+	vertex_input_binding_desc.binding = 0;
+	vertex_input_binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	vertex_input_binding_desc.stride = sizeof(Cube_Model::vertex_buffer_solid_face_colors_data[0]);
+
+	vertex_input_attribs[0].binding = 0;
+	vertex_input_attribs[0].location = 0;
+	vertex_input_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	vertex_input_attribs[0].offset = 0;
+
+	vertex_input_attribs[1].binding = 0;
+	vertex_input_attribs[1].location = 1;
+	vertex_input_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	vertex_input_attribs[1].offset = 16;
+
+	const VkDeviceSize offsets[1] = { 0 };
+
+	static constexpr uint32_t num_clear_values = 2;
+	VkClearValue clear_values[num_clear_values];
+	clear_values[0].color.float32[0] = 0.2f;
+	clear_values[0].color.float32[1] = 0.2f;
+	clear_values[0].color.float32[2] = 0.2f;
+	clear_values[0].color.float32[3] = 0.2f;
+	clear_values[1].depthStencil.depth = 1.0f; // farthest away
+	clear_values[1].depthStencil.stencil = 0;
+
+	VkSemaphoreCreateInfo image_acquired_sema_ci = {};
+	image_acquired_sema_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	image_acquired_sema_ci.pNext = nullptr;
+	image_acquired_sema_ci.flags = 0;
+	VK_CHECK(vkCreateSemaphore(logical_device.device, &image_acquired_sema_ci, nullptr, 
+		&image_acquired_sema));
+
+	// Get index of next available swapchain image
+	VK_CHECK(vkAcquireNextImageKHR(logical_device.device, swapchain, UINT64_MAX, image_acquired_sema, 
+		VK_NULL_HANDLE, &current_image));
+
+	VkRenderPassBeginInfo render_pass_begin = {};
+	render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	render_pass_begin.pNext = nullptr;
+	render_pass_begin.renderPass = render_pass;
+	assert(current_image < framebuffers.size());
+	render_pass_begin.framebuffer = framebuffers[current_image];
+	render_pass_begin.renderArea.offset.x = 0;
+	render_pass_begin.renderArea.offset.y = 0;
+	render_pass_begin.renderArea.extent.width = swapchain_extent.width;
+	render_pass_begin.renderArea.extent.height = swapchain_extent.height;
+	render_pass_begin.clearValueCount = num_clear_values;
+	render_pass_begin.pClearValues = clear_values;
+
+	VK_CHECK(exec_begin_gr_command_buffer());
+	vkCmdBeginRenderPass(logical_device.gr_cmd_buf, &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBindVertexBuffers(
+		logical_device.gr_cmd_buf, 
+		0, // Start binding
+		1, // Binding count
+		&vertex_buffer.buf, // pBuffers
+		offsets); // pOffsets
+	vkCmdEndRenderPass(logical_device.gr_cmd_buf);
+	VK_CHECK(exec_end_gr_command_buffer());
+
+	return STATUS_OK;
+}
+
 void Vulkan_Instance_Info::cleanup() {
+
+	vkDestroySemaphore(logical_device.device, image_acquired_sema, nullptr);
+	vkFreeMemory(logical_device.device, vertex_buffer.mem, nullptr);
+	vkDestroyBuffer(logical_device.device, vertex_buffer.buf, nullptr);
+
+
 	for (uint32_t i = 0; i < framebuffers.size(); ++i) {
 		vkDestroyFramebuffer(logical_device.device, framebuffers[i], nullptr);
 	}
@@ -755,4 +867,18 @@ void Vulkan_Instance_Info::cleanup() {
     vkDestroyCommandPool(logical_device.device, logical_device.gr_cmd_pool, nullptr);
     vkDestroyDevice(logical_device.device, nullptr);
     vkDestroyInstance(instance, nullptr);
+}
+
+VkResult Vulkan_Instance_Info::exec_begin_gr_command_buffer() {
+	VkCommandBufferBeginInfo cmd_buf_begin_info = {};
+	cmd_buf_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmd_buf_begin_info.pNext = nullptr;
+	cmd_buf_begin_info.flags = 0;
+	cmd_buf_begin_info.pInheritanceInfo = nullptr;
+
+	return vkBeginCommandBuffer(logical_device.gr_cmd_buf, &cmd_buf_begin_info);
+}
+
+VkResult Vulkan_Instance_Info::exec_end_gr_command_buffer() {
+	return vkEndCommandBuffer(logical_device.gr_cmd_buf);
 }
