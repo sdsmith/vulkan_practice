@@ -122,6 +122,7 @@ struct Vulkan_Instance_Info
 	Status setup_shaders();
 	Status setup_framebuffer();
 	Status setup_vertex_buffer();
+	Status setup_graphics_pipeline();
 
     void cleanup();
 

@@ -829,6 +829,20 @@ Status Vulkan_Instance_Info::setup_vertex_buffer() {
 	return STATUS_OK;
 }
 
+Status Vulkan_Instance_Info::setup_graphics_pipeline() {
+	// Dynamic state
+	//
+	VkDynamicState dynamic_state_enables[VK_DYNAMIC_STATE_RANGE_SIZE];
+	VkPipelineDynamicStateCreateInfo dynamic_state_ci = {};
+	memset(dynamic_state_enables, 0, sizeof(dynamic_state_enables));
+	dynamic_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic_state_ci.pNext = nullptr;
+	dynamic_state_ci.dynamicStateCount = 0;
+	dynamic_state_ci.pDynamicStates = dynamic_state_enables;
+
+	// Pipeline vertex input state
+}
+
 void Vulkan_Instance_Info::cleanup() {
 
 	vkDestroySemaphore(logical_device.device, image_acquired_sema, nullptr);
