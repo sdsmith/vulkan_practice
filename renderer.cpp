@@ -32,7 +32,18 @@ Status Vulkan_Instance_Info::setup_primary_physical_device() {
 
     system.physical_devices.resize(dev_count);
     VK_CHECK(vkEnumeratePhysicalDevices(instance, &dev_count, system.physical_devices.data()));
+    
+    // TODO: be lazy about it and pick the first available device.
     system.primary.device = system.physical_devices[0];
+
+    VkPhysicalDeviceProperties dev_props = {};
+    vkGetPhysicalDeviceProperties(system.primary.device, &dev_props);
+    if (dev_props.apiVersion < app_info.apiVersion) {
+        log_error("Vulkan version %u.%u not supported by device (max version %u.%u)\n",
+            VK_VERSION_MAJOR(app_info.apiVersion), VK_VERSION_MINOR(app_info.apiVersion),
+            VK_VERSION_MAJOR(dev_props.apiVersion), VK_VERSION_MINOR(dev_props.apiVersion));
+        return !STATUS_OK;
+    }
 
     // NOTE: A device defines types of queues that can perform specific work.
     // Each queue type is called a queue family. Each queue family may have one
