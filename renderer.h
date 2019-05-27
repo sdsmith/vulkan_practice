@@ -69,8 +69,10 @@ struct Vulkan_Instance_Info
 	std::vector<VkFramebuffer> framebuffers;
 
 	Vertex_Buffer vertex_buffer;
-	VkVertexInputBindingDescription vertex_input_binding_desc;
+	VkVertexInputBindingDescription vertex_input_binding;
 	VkVertexInputAttributeDescription vertex_input_attribs[2];
+
+    VkPipeline pipeline;
 
 	VkSemaphore image_acquired_sema;
 	uint32_t current_image;
