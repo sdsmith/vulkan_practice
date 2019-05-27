@@ -149,7 +149,7 @@ Status Vulkan_Instance_Info::create_command_pool() {
     cmd_pool_ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_ci.pNext = nullptr;
     cmd_pool_ci.queueFamilyIndex = system.primary.queue.gr_family_index;
-    cmd_pool_ci.flags = 0;
+    cmd_pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     VK_CHECK(vkCreateCommandPool(logical.device, &cmd_pool_ci, nullptr, &logical.gr_cmd_pool));
     return STATUS_OK;
 }
@@ -1102,6 +1102,7 @@ Status Vulkan_Instance_Info::render() {
     present_info.pResults = nullptr;
     VK_CHECK(vkQueuePresentKHR(present_queue, &present_info));
 
+    // TODO: move to single instantiation
     vkDestroyFence(logical.device, draw_fence, nullptr);
 
     return STATUS_OK;

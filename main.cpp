@@ -6,6 +6,12 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+static bool g_running = true;
+
+void window_destroy_callback() {
+    g_running = false;
+}
+
 int main()
 {
     Vulkan_Instance_Info vulkan = {};
@@ -68,7 +74,7 @@ int main()
     window_rect.y = CW_USEDEFAULT;
     window_rect.width = window_width;
     window_rect.height = window_height;
-    Window window = create_window(window_rect);
+    Window window = create_window(window_rect, window_destroy_callback);
     process_window_messages(window);
 
     STATUS_CHECK(vulkan.create_surface(window));
@@ -90,7 +96,10 @@ int main()
 	STATUS_CHECK(vulkan.setup_vertex_buffer());
     STATUS_CHECK(vulkan.setup_graphics_pipeline());
 
-    STATUS_CHECK(vulkan.render());
+    while (g_running) {
+        process_window_messages(window);
+        STATUS_CHECK(vulkan.render());
+    }
 
     vulkan.cleanup();
     return 0;

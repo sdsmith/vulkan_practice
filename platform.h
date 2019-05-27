@@ -31,7 +31,8 @@ void log_error(char const* format, Args... args)
 
 LRESULT CALLBACK window_proc_callback(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param);
 
-Window create_window(const Rect& window_rect);
+using Destroy_Callback = void (*)();
+Window create_window(const Rect& window_rect, Destroy_Callback destroy_callback);
 
 int process_window_messages(Window const& window);
 

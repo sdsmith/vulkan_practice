@@ -4,9 +4,10 @@
 
 #ifdef _WIN32
 
+static Destroy_Callback g_window_destroy_callback;
+
 constexpr LPCTSTR window_class_name = TEXT("VulkanPractice");
 constexpr LPCTSTR window_name = TEXT("Vulkan Practice");
-
 LRESULT CALLBACK window_proc_callback(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param)
 {
     switch (msg) {
@@ -15,6 +16,7 @@ LRESULT CALLBACK window_proc_callback(HWND hwnd, UINT msg, WPARAM w_param, LPARA
         break;
 
     case WM_DESTROY:
+        g_window_destroy_callback();
         PostQuitMessage(0);
         break;
 
@@ -25,8 +27,10 @@ LRESULT CALLBACK window_proc_callback(HWND hwnd, UINT msg, WPARAM w_param, LPARA
     return 0;
 }
 
-Window create_window(const Rect& window_rect)
+Window create_window(const Rect& window_rect, Destroy_Callback destroy_callback)
 {
+    g_window_destroy_callback = destroy_callback;
+
     Window window = {};
     window.h_instance = GetModuleHandle(nullptr);
 
