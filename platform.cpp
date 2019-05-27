@@ -1,5 +1,6 @@
 #include "platform.h"
 
+#include "synchapi.h"
 #include <cassert>
 
 #ifdef _WIN32
@@ -79,6 +80,33 @@ int process_window_messages(Window const& window)
     }
 
     return num_msgs;
+}
+
+static double g_platform_init = false;
+static double g_sys_perf_freq_ms = 0.0;
+
+void init_platform() {
+    LARGE_INTEGER sys_perf_freq;
+    if (!QueryPerformanceFrequency(&sys_perf_freq))
+    {
+        log_error("QueryPerformanceCounter failed\n");
+        assert(!"QueryPerformanceCounter failed");
+    }
+
+    g_sys_perf_freq_ms = static_cast<double>(sys_perf_freq.QuadPart) / 1000.0;
+
+    g_platform_init = true;
+}
+
+double get_perf_counter_ms() {
+    assert(g_platform_init);
+    LARGE_INTEGER sys_perf_counter;
+    QueryPerformanceCounter(&sys_perf_counter);
+    return static_cast<double>(sys_perf_counter.QuadPart) / g_sys_perf_freq_ms;
+}
+
+void sleep(double milliseconds) {
+    Sleep(static_cast<DWORD>(milliseconds));
 }
 
 #endif // _WIN32

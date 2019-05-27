@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdio>
+
 struct Rect
 {
     int x;
@@ -35,5 +37,11 @@ using Destroy_Callback = void (*)();
 Window create_window(const Rect& window_rect, Destroy_Callback destroy_callback);
 
 int process_window_messages(Window const& window);
+
+void init_platform();
+
+double get_perf_counter_ms();
+
+void sleep(double milliseconds);
 
 #endif // _WIN32

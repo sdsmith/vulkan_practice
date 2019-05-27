@@ -14,6 +14,8 @@ void window_destroy_callback() {
 
 int main()
 {
+    init_platform();
+
     Vulkan_Instance_Info vulkan = {};
 
     constexpr char const* app_name = "Vulkan Practice";
@@ -96,9 +98,21 @@ int main()
 	STATUS_CHECK(vulkan.setup_vertex_buffer());
     STATUS_CHECK(vulkan.setup_graphics_pipeline());
 
+    const double desired_fps = 60;
+    const double ms_per_frame = 1000.0 / desired_fps;
+        
     while (g_running) {
+        const double time_start_ms = get_perf_counter_ms();
+
         process_window_messages(window);
         STATUS_CHECK(vulkan.render());
+
+        const double time_end_ms = get_perf_counter_ms();
+        const double elapsed_frame_delta_ms = time_end_ms - time_start_ms;
+        const double remaining_frame_time_ms = ms_per_frame - elapsed_frame_delta_ms;
+        if (remaining_frame_time_ms > 0) {
+            sleep(remaining_frame_time_ms);
+        }
     }
 
     vulkan.cleanup();
