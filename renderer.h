@@ -90,7 +90,7 @@ struct Vulkan_Instance_Info
         VkDevice device;
         VkCommandPool gr_cmd_pool;
         VkCommandBuffer gr_cmd_buf;
-    } logical_device;
+    } logical;
     
     struct System
     {
