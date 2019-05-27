@@ -39,6 +39,9 @@ struct Vulkan_Instance_Info
     std::vector<char const*> device_extension_names;
     std::vector<char const*> device_layer_names;
 
+    VkQueue gr_queue;
+    VkQueue present_queue;
+
     VkSurfaceKHR surface;
     VkSurfaceCapabilitiesKHR surface_capabilities;
     VkSwapchainKHR swapchain;
@@ -74,6 +77,11 @@ struct Vulkan_Instance_Info
 
     VkPipeline pipeline;
 
+    VkViewport viewport;
+    VkRect2D scissor;
+    static constexpr uint32_t num_viewports = 1;
+    static constexpr uint32_t num_scissors = 1;
+
 	VkSemaphore image_acquired_sema;
 	uint32_t current_image;
 
@@ -105,6 +113,7 @@ struct Vulkan_Instance_Info
     Status setup_primary_physical_device();
     Status find_graphics_and_present_queue();
     Status create_logical_device();
+    Status setup_device_queue();
     Status create_command_pool();
     Status create_command_buffer();
 
@@ -125,6 +134,8 @@ struct Vulkan_Instance_Info
 	Status setup_framebuffer();
 	Status setup_vertex_buffer();
 	Status setup_graphics_pipeline();
+
+    Status render();
 
     void cleanup();
 

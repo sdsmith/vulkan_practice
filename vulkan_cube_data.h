@@ -55,6 +55,8 @@ struct VertexUV {
 
 namespace Cube_Model
 {
+    static constexpr uint32_t vertex_count = 12 * 3;
+
     static constexpr Vertex vertex_buffer_data[] = {
         {XYZ1(-1, -1, -1), XYZ1(0.f, 0.f, 0.f)}, {XYZ1(1, -1, -1), XYZ1(1.f, 0.f, 0.f)}, {XYZ1(-1, 1, -1), XYZ1(0.f, 1.f, 0.f)},
         {XYZ1(-1, 1, -1), XYZ1(0.f, 1.f, 0.f)},  {XYZ1(1, -1, -1), XYZ1(1.f, 0.f, 0.f)}, {XYZ1(1, 1, -1), XYZ1(1.f, 1.f, 0.f)},

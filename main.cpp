@@ -56,6 +56,7 @@ int main()
     STATUS_CHECK(vulkan.create_surface(window));
     STATUS_CHECK(vulkan.find_graphics_and_present_queue());
     STATUS_CHECK(vulkan.create_logical_device());
+    STATUS_CHECK(vulkan.setup_device_queue());
     STATUS_CHECK(vulkan.create_command_pool());
     STATUS_CHECK(vulkan.create_command_buffer());
 
@@ -70,6 +71,8 @@ int main()
 	STATUS_CHECK(vulkan.setup_framebuffer());
 	STATUS_CHECK(vulkan.setup_vertex_buffer());
     STATUS_CHECK(vulkan.setup_graphics_pipeline());
+
+    STATUS_CHECK(vulkan.render());
 
     vulkan.cleanup();
     return 0;

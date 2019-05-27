@@ -120,6 +120,18 @@ Status Vulkan_Instance_Info::create_logical_device() {
     return STATUS_OK;
 }
 
+Status Vulkan_Instance_Info::setup_device_queue() {
+    vkGetDeviceQueue(logical_device.device, system.primary.queue.gr_family_index, 0, &gr_queue);
+    if (system.primary.queue.gr_family_index == system.primary.queue.present_family_index) {
+        present_queue = gr_queue;
+    }
+    else {
+        vkGetDeviceQueue(logical_device.device, system.primary.queue.present_family_index, 0, &present_queue);
+    }
+
+    return STATUS_OK;
+}
+
 Status Vulkan_Instance_Info::create_command_pool() {
     // NOTE: Need one pool for each type of queue being used.
     VkCommandPoolCreateInfo cmd_pool_ci = {};
@@ -780,52 +792,6 @@ Status Vulkan_Instance_Info::setup_vertex_buffer() {
 	vertex_input_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
 	vertex_input_attribs[1].offset = 16;
 
-	const VkDeviceSize offsets[1] = { 0 };
-
-	static constexpr uint32_t num_clear_values = 2;
-	VkClearValue clear_values[num_clear_values];
-	clear_values[0].color.float32[0] = 0.2f;
-	clear_values[0].color.float32[1] = 0.2f;
-	clear_values[0].color.float32[2] = 0.2f;
-	clear_values[0].color.float32[3] = 0.2f;
-	clear_values[1].depthStencil.depth = 1.0f; // farthest away
-	clear_values[1].depthStencil.stencil = 0;
-
-	VkSemaphoreCreateInfo image_acquired_sema_ci = {};
-	image_acquired_sema_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	image_acquired_sema_ci.pNext = nullptr;
-	image_acquired_sema_ci.flags = 0;
-	VK_CHECK(vkCreateSemaphore(logical_device.device, &image_acquired_sema_ci, nullptr, 
-		&image_acquired_sema));
-
-	// Get index of next available swapchain image
-	VK_CHECK(vkAcquireNextImageKHR(logical_device.device, swapchain, UINT64_MAX, image_acquired_sema, 
-		VK_NULL_HANDLE, &current_image));
-
-	VkRenderPassBeginInfo render_pass_begin = {};
-	render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	render_pass_begin.pNext = nullptr;
-	render_pass_begin.renderPass = render_pass;
-	assert(current_image < framebuffers.size());
-	render_pass_begin.framebuffer = framebuffers[current_image];
-	render_pass_begin.renderArea.offset.x = 0;
-	render_pass_begin.renderArea.offset.y = 0;
-	render_pass_begin.renderArea.extent.width = swapchain_extent.width;
-	render_pass_begin.renderArea.extent.height = swapchain_extent.height;
-	render_pass_begin.clearValueCount = num_clear_values;
-	render_pass_begin.pClearValues = clear_values;
-
-	VK_CHECK(exec_begin_gr_command_buffer());
-	vkCmdBeginRenderPass(logical_device.gr_cmd_buf, &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
-	vkCmdBindVertexBuffers(
-		logical_device.gr_cmd_buf, 
-		0, // Start binding
-		1, // Binding count
-		&vertex_buffer.buf, // pBuffers
-		offsets); // pOffsets
-	vkCmdEndRenderPass(logical_device.gr_cmd_buf);
-	VK_CHECK(exec_end_gr_command_buffer());
-
 	return STATUS_OK;
 }
 
@@ -914,10 +880,10 @@ Status Vulkan_Instance_Info::setup_graphics_pipeline() {
     viewport_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewport_state_ci.pNext = nullptr;
     viewport_state_ci.flags = 0;
-    viewport_state_ci.viewportCount = 1;
+    viewport_state_ci.viewportCount = num_viewports;
     dynamic_state_enables[dynamic_state_ci.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
     viewport_state_ci.pViewports = nullptr;
-    viewport_state_ci.scissorCount = 1;
+    viewport_state_ci.scissorCount = num_scissors;
     dynamic_state_enables[dynamic_state_ci.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
     viewport_state_ci.pScissors = nullptr;
 
@@ -980,6 +946,152 @@ Status Vulkan_Instance_Info::setup_graphics_pipeline() {
     pipeline_ci.renderPass = render_pass;
     pipeline_ci.subpass = 0;
     VK_CHECK(vkCreateGraphicsPipelines(logical_device.device, VK_NULL_HANDLE, 1, &pipeline_ci, nullptr, &pipeline));
+
+    return STATUS_OK;
+}
+
+Status Vulkan_Instance_Info::render() {
+    // Get swapchain image to render into
+
+    const VkDeviceSize offsets[1] = { 0 };
+
+    static constexpr uint32_t num_clear_values = 2;
+    VkClearValue clear_values[num_clear_values];
+    clear_values[0].color.float32[0] = 0.2f;
+    clear_values[0].color.float32[1] = 0.2f;
+    clear_values[0].color.float32[2] = 0.2f;
+    clear_values[0].color.float32[3] = 0.2f;
+    clear_values[1].depthStencil.depth = 1.0f; // farthest away
+    clear_values[1].depthStencil.stencil = 0;
+
+    VkSemaphoreCreateInfo image_acquired_sema_ci = {};
+    image_acquired_sema_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    image_acquired_sema_ci.pNext = nullptr;
+    image_acquired_sema_ci.flags = 0;
+    VK_CHECK(vkCreateSemaphore(logical_device.device, &image_acquired_sema_ci, nullptr,
+        &image_acquired_sema));
+
+    // Get next available swapchain image
+    VK_CHECK(vkAcquireNextImageKHR(logical_device.device, swapchain, UINT64_MAX, image_acquired_sema,
+        VK_NULL_HANDLE, &current_image));
+
+    VK_CHECK(exec_begin_gr_command_buffer());
+    {
+        // Begin render pass
+        VkRenderPassBeginInfo render_pass_begin;
+        render_pass_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        render_pass_begin.pNext = nullptr;
+        render_pass_begin.renderPass = render_pass;
+        assert(current_image < framebuffers.size());
+        render_pass_begin.framebuffer = framebuffers[current_image];
+        render_pass_begin.renderArea.offset.x = 0;
+        render_pass_begin.renderArea.offset.y = 0;
+        render_pass_begin.renderArea.extent.width = swapchain_extent.width;
+        render_pass_begin.renderArea.extent.height = swapchain_extent.height;
+        render_pass_begin.clearValueCount = num_clear_values;
+        render_pass_begin.pClearValues = clear_values;
+        vkCmdBeginRenderPass(logical_device.gr_cmd_buf, &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+        // Bind vertex buf
+        vkCmdBindVertexBuffers(
+            logical_device.gr_cmd_buf,
+            0, // Start binding
+            1, // Binding count
+            &vertex_buffer.buf, // pBuffers
+            offsets); // pOffsets
+
+        // Bind pipeline
+        //
+        // Describes how to render primatives.
+        vkCmdBindPipeline(logical_device.gr_cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        // Bind descriptor sets
+        //
+        // Describes shader input
+        vkCmdBindDescriptorSets(logical_device.gr_cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, desc_sets.data(), 0, nullptr);
+
+        // Bind vertex buffer
+        //
+        const VkDeviceSize offsets[1] = { 0 };
+        vkCmdBindVertexBuffers(logical_device.gr_cmd_buf, 0, 1, &vertex_buffer.buf, offsets);
+
+        // Set viewport and scissor rectangle
+        //
+        // NOTE: Able to set in command buffer due to viewport and scissor state being dynamic.
+        viewport.height = static_cast<float>(swapchain_extent.height);
+        viewport.width = static_cast<float>(swapchain_extent.width);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(logical_device.gr_cmd_buf, 0, num_viewports, &viewport);
+
+        scissor.extent.width = swapchain_extent.width;
+        scissor.extent.height = swapchain_extent.height;
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+        vkCmdSetScissor(logical_device.gr_cmd_buf, 0, num_scissors, &scissor);
+
+        // Draw
+        //
+        vkCmdDraw(logical_device.gr_cmd_buf, Cube_Model::vertex_count, 1, 0, 0);
+        vkCmdEndRenderPass(logical_device.gr_cmd_buf);
+    }
+    VK_CHECK(exec_end_gr_command_buffer());
+
+    // Transition swapchain image for present
+    //
+    // NOTE: Handled by setting the attachment description. Could also use a memory barrier approach.
+
+    // Submit the command buffer
+    //
+    
+    // Fense to wait for GPU completion
+    VkFenceCreateInfo fence_ci = {};
+    VkFence draw_fence;
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = nullptr;
+    fence_ci.flags = 0;
+    vkCreateFence(logical_device.device, &fence_ci, nullptr, &draw_fence);
+
+    // Wait at the color attachment stage until swapchain image is available before writing colors.
+    const std::vector<VkCommandBuffer> cmd_bufs = { logical_device.gr_cmd_buf };
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // stage when final color values are output from pipeline
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].pNext = nullptr;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info[0].waitSemaphoreCount = 1;
+    submit_info[0].pWaitSemaphores = &image_acquired_sema;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
+    submit_info[0].commandBufferCount = cmd_bufs.size();
+    submit_info[0].pCommandBuffers = cmd_bufs.data();
+    submit_info[0].signalSemaphoreCount = 0;
+    submit_info[0].pSignalSemaphores = nullptr;
+    VK_CHECK(vkQueueSubmit(gr_queue, 1, submit_info, draw_fence));
+
+    // Wait for GPU completion
+    static constexpr uint64_t fence_timeout = 100000000;
+
+    VkResult res;
+    do {
+        res = vkWaitForFences(logical_device.device, 1, &draw_fence, VK_TRUE, fence_timeout);
+    } while (res == VK_TIMEOUT);
+    VK_CHECK(res);
+
+    // Present
+    //
+    VkPresentInfoKHR present_info;
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.pNext = nullptr;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &swapchain;
+    present_info.pImageIndices = &current_image;
+    present_info.pWaitSemaphores = nullptr;
+    present_info.waitSemaphoreCount = 0;
+    present_info.pResults = nullptr;
+    VK_CHECK(vkQueuePresentKHR(present_queue, &present_info));
+
+    vkDestroyFence(logical_device.device, draw_fence, nullptr);
 
     return STATUS_OK;
 }
