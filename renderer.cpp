@@ -1074,7 +1074,7 @@ Status Vulkan_Instance_Info::render() {
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &image_acquired_sema;
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
-    submit_info[0].commandBufferCount = cmd_bufs.size();
+    submit_info[0].commandBufferCount = static_cast<uint32_t>(cmd_bufs.size());
     submit_info[0].pCommandBuffers = cmd_bufs.data();
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = nullptr;
