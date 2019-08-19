@@ -354,6 +354,13 @@ Status Vulkan_Instance_Info::setup_swapchain(uint32_t num_buf_frames, uint32_t i
         VK_CHECK(vkCreateImageView(logical.device, &color_image_view_ci, nullptr, &swapchain_buffers[i].view));
     }
 
+    VkSemaphoreCreateInfo image_acquired_sema_ci = {};
+    image_acquired_sema_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    image_acquired_sema_ci.pNext = nullptr;
+    image_acquired_sema_ci.flags = 0;
+    VK_CHECK(vkCreateSemaphore(logical.device, &image_acquired_sema_ci, nullptr,
+        &image_acquired_sema));
+
     return STATUS_OK;
 }
 
@@ -975,13 +982,6 @@ Status Vulkan_Instance_Info::render() {
     clear_values[1].depthStencil.depth = 1.0f; // farthest away
     clear_values[1].depthStencil.stencil = 0;
 
-    VkSemaphoreCreateInfo image_acquired_sema_ci = {};
-    image_acquired_sema_ci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    image_acquired_sema_ci.pNext = nullptr;
-    image_acquired_sema_ci.flags = 0;
-    VK_CHECK(vkCreateSemaphore(logical.device, &image_acquired_sema_ci, nullptr,
-        &image_acquired_sema));
-
     // Get next available swapchain image
     VK_CHECK(vkAcquireNextImageKHR(logical.device, swapchain, UINT64_MAX, image_acquired_sema,
         VK_NULL_HANDLE, &current_image));
@@ -1111,7 +1111,6 @@ Status Vulkan_Instance_Info::render() {
 void Vulkan_Instance_Info::cleanup() {
     vkDestroyPipeline(logical.device, pipeline, nullptr);
 
-	vkDestroySemaphore(logical.device, image_acquired_sema, nullptr);
 	vkFreeMemory(logical.device, vertex_buffer.mem, nullptr);
 	vkDestroyBuffer(logical.device, vertex_buffer.buf, nullptr);
 
@@ -1138,6 +1137,7 @@ void Vulkan_Instance_Info::cleanup() {
     vkDestroyImageView(logical.device, depth_buf.view, nullptr);
     vkDestroyImage(logical.device, depth_buf.image, nullptr);
 
+    vkDestroySemaphore(logical.device, image_acquired_sema, nullptr);
     for (Swapchain_Buffer& buf : swapchain_buffers) {
         vkDestroyImageView(logical.device, buf.view, nullptr);
     }

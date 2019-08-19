@@ -100,12 +100,19 @@ int main()
 
     const double desired_fps = 60;
     const double ms_per_frame = 1000.0 / desired_fps;
-        
+    uint32_t loop_num = 0;
+
     while (g_running) {
         const double time_start_ms = get_perf_counter_ms();
 
         process_window_messages(window);
-        STATUS_CHECK(vulkan.render());
+        if (!g_running) { break; } // Break early since window has been destroyed
+
+        Status res = vulkan.render();
+        if (res != STATUS_OK) {
+            log_error("Main loop: failed on loop %u\n", loop_num);
+            STATUS_CHECK(res);
+        }
 
         const double time_end_ms = get_perf_counter_ms();
         const double elapsed_frame_delta_ms = time_end_ms - time_start_ms;
@@ -113,6 +120,8 @@ int main()
         if (remaining_frame_time_ms > 0) {
             sleep(remaining_frame_time_ms);
         }
+
+        loop_num++;
     }
 
     vulkan.cleanup();
