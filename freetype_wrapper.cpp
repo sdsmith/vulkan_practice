@@ -11,6 +11,11 @@
         }                                                \
     } while (0)
 
+/*
+	- font file loads into a \a face (FT_New_Face)
+	- a glyph is taken from a face (FT_Get_Char_Index)
+ */
+
 Status Free_Type_Wrapper::initialize() {
     FT_ERROR(FT_Init_FreeType(&m_library));
 
@@ -23,7 +28,7 @@ Status Free_Type_Wrapper::load_font(const std::string& path) {
 
     FT_Error err = FT_New_Face(m_library, path.c_str(), 0, &m_face);
     if (err == FT_Err_Unknown_File_Format) {
-        log_error("Unknown font format: %s\n", path.c_str());
+        log_error("Unknown font format: %s\n", path.c_str()); // TODO: find the extension
     }
     FT_ERROR(err);
 
@@ -67,5 +72,26 @@ Status Free_Type_Wrapper::load_glyph_bitmap(FT_ULong charcode) {
 
 // TODO: Convert bitmap to texture. Keep cached textures for run.
 class Glyph {
+public:
     Glyph(FT_Face face, FT_UInt glyph_index);
 };
+
+void Renderer::draw(float x, float y, const std::string& text)
+{
+	int cur_x_pos = x;
+	for (char c : text) {
+		const Glyph& glyph = GetGlyph(c);
+		const Texture* tex = glyph->GetTexture();
+
+		if (tex) {
+			SetTexture(tex);
+			float x0 = cur_x_pos + glyph->GetLeft();
+			float y0 = y - glyph->GetTop();
+			DrawSprite(x0, y0, tex->GetWidth(), tex->GetHeight());
+		} else {
+			// TODO: Draw some default character (the box with an X through it?)
+		}
+	
+		cur_x_pos += glyph->GetHorizontalAdvance();
+	}
+}

@@ -1,8 +1,10 @@
+#include "freetype_wrapper.h"
 #include "platform.h"
 #include "renderer.h"
 #include "status.h"
 #include <cassert>
 #include <iostream>
+#include <optional>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -97,6 +99,13 @@ int main()
 	STATUS_CHECK(vulkan.setup_framebuffer());
 	STATUS_CHECK(vulkan.setup_vertex_buffer());
     STATUS_CHECK(vulkan.setup_graphics_pipeline());
+
+	//renderer.create_texture_atlas();
+
+	Free_Type_Wrapper ft();
+	ft.initialize();
+	ft.load_font("resources/font/LiberationMono-Regular.ttf");
+	ft.draw(0, 0, "Hello world!");
 
     const double desired_fps = 60;
     const double ms_per_frame = 1000.0 / desired_fps;

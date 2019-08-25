@@ -8,6 +8,8 @@
 
 class Free_Type_Wrapper {
 public:
+	Free_Type_Wrapper() = default;
+
     Status initialize();
     Status load_font(const std::string& path);
 
